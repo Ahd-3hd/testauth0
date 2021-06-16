@@ -1,5 +1,30 @@
 import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
+import axios from "axios";
+
+const userIsLead = async (user) => {
+  console.log("START HERE");
+  console.log(user);
+  const email = user.email || "";
+  const name = user.name;
+  const { data: filteredLeads } = await axios.get(
+    `http://localhost:3001/filter_leads?email=${email}`
+  );
+
+  if (filteredLeads.length == 0) {
+    // create a lead with this email
+    const { data: createdLead } = await axios.post(
+      `http://localhost:3001/create_lead`,
+      {
+        email: email,
+        lastName: name,
+        // TODO: update with acutal company input
+        company: name,
+      }
+    );
+    console.log(createdLead);
+  }
+};
 
 // For more information on each option (and a full list of options) go to
 // https://next-auth.js.org/configuration/options
@@ -31,10 +56,10 @@ export default NextAuth({
     //   clientId: process.env.GITHUB_ID,
     //   clientSecret: process.env.GITHUB_SECRET,
     // }),
-    // Providers.Google({
-    //   clientId: process.env.GOOGLE_ID,
-    //   clientSecret: process.env.GOOGLE_SECRET,
-    // }),
+    Providers.Google({
+      clientId: process.env.GOOGLE_ID,
+      clientSecret: process.env.GOOGLE_SECRET,
+    }),
     // Providers.Twitter({
     //   clientId: process.env.TWITTER_ID,
     //   clientSecret: process.env.TWITTER_SECRET,
@@ -109,7 +134,9 @@ export default NextAuth({
   // https://next-auth.js.org/configuration/callbacks
   callbacks: {
     async signIn(user, account, profile) {
-      console.log(user, account, profile);
+      // console.log(user, account, profile);
+      const isLead = await userIsLead(user);
+
       return true;
     },
     // async redirect(url, baseUrl) { return baseUrl },
@@ -132,5 +159,5 @@ export default NextAuth({
   theme: "light",
 
   // Enable debug messages in the console if you are having problems
-  debug: true,
+  debug: false,
 });
