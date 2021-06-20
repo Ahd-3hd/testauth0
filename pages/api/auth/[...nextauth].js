@@ -2,27 +2,33 @@ import NextAuth from "next-auth";
 import Providers from "next-auth/providers";
 import axios from "axios";
 
-const userIsLead = async (user) => {
-  console.log("START HERE");
-  console.log(user);
-  const email = user.email || "";
-  const name = user.name;
-  const { data: filteredLeads } = await axios.get(
-    `http://localhost:3001/filter_leads?email=${email}`
-  );
+const createLead = async (email) => {
+  const { data } = await axios.post(`http://localhost:3001/fabric_lead`, {
+    email,
+  });
 
-  if (filteredLeads.length == 0) {
-    // create a lead with this email
-    const { data: createdLead } = await axios.post(
-      `http://localhost:3001/create_lead`,
+  console.log(555, data);
+};
+
+const salesForceObject = async (user) => {
+  // console.log(123123, user.account);
+  if (user.account.provider == "linkedin") {
+    const accessToken = user.account.accessToken;
+    const {
+      data: { elements },
+    } = await axios.get(
+      `https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))`,
       {
-        email: email,
-        lastName: name,
-        // TODO: update with acutal company input
-        company: name,
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
       }
     );
-    console.log(createdLead);
+    const userEmail = elements[0]["handle~"].emailAddress;
+    createLead(userEmail);
+  } else {
+    console.log(user);
+    createLead(user.user.email);
   }
 };
 
@@ -139,22 +145,21 @@ export default NextAuth({
   // when an action is performed.
   // https://next-auth.js.org/configuration/callbacks
   callbacks: {
-    async signIn(user, account, profile) {
-      console.log(1122, account);
-      const accessToken = account.accessToken;
-      const testing = await axios.get(
-        `https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))`,
-        {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        }
-      );
-      console.log(testing.data.elements[0]["handle~"].emailAddress);
-      // const isLead = await userIsLead(user);
-
-      return true;
-    },
+    // async signIn(user, account, profile) {
+    //   // if (account.provider == "linkedin") {
+    //   //   const accessToken = account.accessToken;
+    //   //   const testing = await axios.get(
+    //   //     `https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))`,
+    //   //     {
+    //   //       headers: {
+    //   //         Authorization: `Bearer ${accessToken}`,
+    //   //       },
+    //   //     }
+    //   //   );
+    //   // }
+    //   // const isLead = await userIsLead(user);
+    //   return true;
+    // },
     // async redirect(url, baseUrl) { return baseUrl },
     // async session(session, user) { return session },
     // async jwt(token, user, account, profile, isNewUser) { return token }
@@ -163,11 +168,13 @@ export default NextAuth({
   // Events are useful for logging
   // https://next-auth.js.org/configuration/events
   events: {
-    // signIn: (user, account, isNewUser) => {
-    //   console.log(
-    //     `[DEBUG-EVENT]: ${JSON.stringify(user)} - ${account} - ${isNewUser}`
-    //   );
-    // },
+    signIn: (user, account, isNewUser) => {
+      // salesForceObject(user);
+
+      if (isNewUser) {
+        salesForceObject(user);
+      }
+    },
   },
 
   // You can set the theme to 'light', 'dark' or use 'auto' to default to the
