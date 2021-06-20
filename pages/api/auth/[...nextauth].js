@@ -64,14 +64,20 @@ export default NextAuth({
     //   clientId: process.env.TWITTER_ID,
     //   clientSecret: process.env.TWITTER_SECRET,
     // }),
-    Providers.Auth0({
-      clientId: process.env.AUTH0_ID,
-      clientSecret: process.env.AUTH0_SECRET,
-      domain: process.env.AUTH0_DOMAIN,
-    }),
+    // Providers.Auth0({
+    //   clientId: process.env.AUTH0_ID,
+    //   clientSecret: process.env.AUTH0_SECRET,
+    //   domain: process.env.AUTH0_DOMAIN,
+    // }),
     Providers.LinkedIn({
       clientId: process.env.LINKEDIN_CLIENT_ID,
       clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
+      // profileUrl: `https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))`,
+      scope: "r_liteprofile r_emailaddress",
+      // profile: (data) => {
+      //   console.log(123, JSON.stringify(data));
+      //   return data;
+      // },
     }),
   ],
   // Database optional. MySQL, Maria DB, Postgres and MongoDB are supported.
@@ -134,8 +140,18 @@ export default NextAuth({
   // https://next-auth.js.org/configuration/callbacks
   callbacks: {
     async signIn(user, account, profile) {
-      // console.log(user, account, profile);
-      const isLead = await userIsLead(user);
+      console.log(1122, account);
+      const accessToken = account.accessToken;
+      const testing = await axios.get(
+        `https://api.linkedin.com/v2/emailAddress?q=members&projection=(elements*(handle~))`,
+        {
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
+      console.log(testing.data.elements[0]["handle~"].emailAddress);
+      // const isLead = await userIsLead(user);
 
       return true;
     },
